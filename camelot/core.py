@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import sys
 import tempfile
 import zipfile
 from operator import itemgetter
@@ -331,6 +332,14 @@ class Table:
         Table number on PDF page.
     page : int
         PDF page number.
+    bbox: tuple
+        (x1, y1), (x2, y2)
+    width: float
+        width of table
+    height: float
+        height of table
+    rect: tuple
+        (x1, y1), (width, height)
 
     """
 
@@ -344,6 +353,10 @@ class Table:
         self.whitespace = 0
         self.order = None
         self.page = None
+        self.bbox = self._get_bbox()
+        self.width = self.bbox[1][0] - self.bbox[0][0]
+        self.height = self.bbox[1][1] - self.bbox[0][1]
+        self.rect = self.bbox[0], (self.width, self.height)
 
     def __repr__(self):
         return f"<{self.__class__.__name__} shape={self.shape}>"
@@ -354,6 +367,26 @@ class Table:
                 return True
         if self.page < other.page:
             return True
+
+    def _get_bbox(self):
+        x_min = y_min = sys.maxsize
+        x_max = y_max = -sys.maxsize - 1
+        for (l, r) in self.cols:
+            x1 = min(l, r)
+            x2 = max(l, r)
+            if x1 < x_min:
+                x_min = x1
+            if x2 > x_max:
+                x_max = x2
+
+        for (t, b) in self.rows:
+            y1 = min(t, b)
+            y2 = max(t, b)
+            if y1 < y_min:
+                y_min = y1
+            if y2 > y_max:
+                y_max = y2
+        return (x_min, y_min), (x_max, y_max)
 
     @property
     def data(self):
